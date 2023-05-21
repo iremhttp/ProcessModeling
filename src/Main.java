@@ -1,25 +1,11 @@
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.io.FileWriter;
+import java.io.IOException;
 
 interface ITask {
   void execute();
 }
-
-/*class Task {
-  // private ITask task;
-  private TaskQueue taskQueue;
-
-  public Task(ITask task) {
-    // this.task = task;
-    System.out.println("Create task queue");
-    taskQueue.addTask(task);
-  }
-
-  public void execute() {
-    taskQueue.execute();
-  }
-
-} */
 
 class TaskFactory {
   public static ITask createTask(String taskType, IAdapter adapter, Memorycard memorycard, Communicationcard card) {
@@ -58,39 +44,33 @@ class ReadFromMemoryTask implements ITask, IReadFromMemoryTask {
  private int address;
  private int size ;
 
-public ReadFromMemoryTask (IAdapter adapter,Memorycard memorycard) {
-  this.adapter = adapter;
-  this.memorycard = memorycard ;
-  Scanner scanner = new Scanner(System.in) ;
-  System.out.println("enter a adrress of process");
-  int addres = scanner.nextInt();
-  System.out.println();
-  System.out.println("enter a size of process ");
-  int sze = scanner.nextInt();
-
-  this.address=addres ;
-  this.size = sze;
-
-}
-
+  public ReadFromMemoryTask(IAdapter adapter, Memorycard memorycard) {
+    this.adapter = adapter;
+    this.memorycard = memorycard;
+  }
   @Override
   public void execute() {
+    System.out.println("-Read from memory-");
 
-    System.out.println("Read from memory");
-    getMem(address,size);
+    Scanner scanner = new Scanner(System.in);
+    System.out.println("Enter the address of the process:");
+    int address = scanner.nextInt();
+    System.out.println("Enter the size of the process:");
+    int size = scanner.nextInt();
+
+    getMem(address, size);
+    SystemEventLog eventLog = SystemEventLog.getInstance();
+    eventLog.logEvent("Task completed: " + this.getClass().getSimpleName());
 
   }
-
   @Override
   public byte[] getMem(int addr, int size) {
-if (memorycard.getAddress() ==addr && memorycard.getSize() ==size) {
-  return adapter.read(addr, size);
-}
-else{
-  return  null;
-}
+    if (memorycard.getAddress() == addr && memorycard.getSize() == size) {
+      return adapter.read(addr, size);
+    } else {
+      return null;
+    }
   }
-
 }
 
 class WriteToMemoryTask implements ITask, IWriteToMemoryTask {
@@ -121,12 +101,15 @@ class WriteToMemoryTask implements ITask, IWriteToMemoryTask {
       System.out.println("\n Enter address: ");
       int address = scanner.nextInt();
       setMem(byteArray, address);
+      SystemEventLog eventLog = SystemEventLog.getInstance();
+      eventLog.logEvent("Task completed: " + this.getClass().getSimpleName());
+
     }
     else {
   /*
    * TODO: Ethernet Adapter part
    */
-  System.out.println("ethernet adapter ");
+
     }
   }
 
@@ -150,6 +133,9 @@ class ReadFromCardTask implements ITask, IReadFromCardTask {
   public void execute() {
     System.out.println("Read from card");
     getCom(card.getSize());
+    SystemEventLog eventLog = SystemEventLog.getInstance();
+    eventLog.logEvent("Task completed: " + this.getClass().getSimpleName());
+
   }
 
   @Override
@@ -172,13 +158,10 @@ class WriteToCardTask implements ITask, IWriteToCardTask {
   @Override
   public void execute() {
 Scanner scanner=new Scanner(System.in);
-    System.out.println("Write to card");
-   System.out.println("enter a size");
+    System.out.println("-Write to card-");
    System.out.println("Enter the size of the byte array: ");
    int size = scanner.nextInt();
-
    byte[] byteArray = new byte[size];
-
    System.out.println("Enter " + size + " byte values:");
    for (int i = 0; i < size; i++) {
      byteArray[i] = scanner.nextByte();
@@ -188,8 +171,10 @@ Scanner scanner=new Scanner(System.in);
    for (byte b : byteArray) {
      System.out.print(b + " ");
    }
-
     setCom(byteArray);
+    SystemEventLog eventLog = SystemEventLog.getInstance();
+    eventLog.logEvent("Task completed: " + this.getClass().getSimpleName());
+
   }
 
   @Override
@@ -218,13 +203,14 @@ class TaskQueue {
       task.execute();
     }
   }
+
   public void discardtask (ITask task) {
 
     if (taskQueue.contains(task)) {
       taskQueue.remove(task);
     }
     else {
-      System.out.println("there is no task that is removed");
+      System.out.println("There is no task that is removed");
     }
 
   }
@@ -282,8 +268,6 @@ class Communicationcard {
     this.data = data;
   }
 
-
-
   @Override
   public String toString() {
     return "Communicationcard{" +
@@ -325,7 +309,7 @@ class Memorycard {
       this.address = address;
       int value = ByteBuffer.wrap(data).getInt();
       this.size = value ;
-      System.out.println("the new data is :  "+ Arrays.toString(this.data)+ this.address+this.size );
+      System.out.println("The new data is :  "+ Arrays.toString(this.data)+ this.address+this.size );
       return this.size;
     /*
      * TODO: System event log has finished.
@@ -334,8 +318,8 @@ class Memorycard {
 
   public byte[] getData(int size,int address) {
     if (this.size ==  size &&  this.address ==address) {
-      System.out.println("data is on read processing : ");
-      System.out.println("data read : "+Arrays.toString(this.data));
+      System.out.println("Data is on read processing : ");
+      System.out.println("Data read : "+Arrays.toString(this.data));
 
       return this.data;
       /*
@@ -343,7 +327,7 @@ class Memorycard {
        */
     }else
     {
-      System.out.println( "there is no data");
+      System.out.println( "There is no data...");
       return null;
 
     }
@@ -516,8 +500,6 @@ class Ram implements IRam {
 
 }
 
-
-
 class Thread {
 
    private  TaskQueue taskQueue ;
@@ -542,8 +524,37 @@ class Thread {
   }
 
 }
-
-
+class SystemEventLog{
+  private static SystemEventLog instance;
+  private FileWriter logFile;
+  private SystemEventLog() {
+    try {
+      logFile = new FileWriter("log", true);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  } public static SystemEventLog getInstance() {
+    if (instance == null) {
+      instance = new SystemEventLog();
+    }
+    return instance;
+  }
+  public synchronized void logEvent(String event) {
+    try {
+      logFile.write(event + "\n");
+      logFile.flush();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+  public void closeLogFile() {
+    try {
+      logFile.close();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+}
 public class Main {
   private static byte  [] a ={0};
 
