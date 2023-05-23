@@ -231,20 +231,6 @@ interface IRam {
   int set(byte[] data, int address);
 }
 
-interface IMemory {
-  byte[] getMem(int address, int size);
-
-  void setMem(byte[] data, int address);
-}
-
-interface ICard {
-  byte[] getCom(int address);
-
-  int setCom(byte[] data);
-}
-
-
-
 
 interface  IAdapter {
 
