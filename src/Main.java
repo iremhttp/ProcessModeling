@@ -62,7 +62,7 @@ class ReadFromMemoryTask implements ITask, IReadFromMemoryTask {
     byte [] data= getMem(address,size);
     System.out.println("data read from memory :"+Arrays.toString(data));
     SystemEventLog eventLog = SystemEventLog.getInstance();
-    eventLog.logEvent("Task completed: " + this.getClass().getSimpleName());
+    eventLog.logTaskCompletion(this.getClass().getSimpleName());
 
 
   }
@@ -111,13 +111,11 @@ class WriteToMemoryTask implements ITask, IWriteToMemoryTask {
       int address=scanner.nextInt();
       setMem(convertByteArrayToPrimitive(ethernet.read(size)),address );
       SystemEventLog eventLog = SystemEventLog.getInstance();
-      eventLog.logEvent("Task completed: " + this.getClass().getSimpleName());
-
+      eventLog.logTaskCompletion(this.getClass().getSimpleName());
     }
     else {
       System.out.println("there is not access to memory without Ram");
     }
-
   }
   public static byte[] convertByteArrayToPrimitive(Byte[] byteArray) {
     byte[] primitiveArray = new byte[byteArray.length];
@@ -143,13 +141,12 @@ class ReadFromCardTask implements ITask, IReadFromCardTask {
   @Override
   public void execute() {
     System.out.println("Read from card is in progressing with "+ this.addapter.getClass().getSimpleName());
-    System.out.println("Enter size you want to viewing?");
+    System.out.println("Enter size you want to view: ");
     Scanner scanner =new Scanner(System.in);
     int a =scanner.nextInt();
     getCom(a);
     SystemEventLog eventLog = SystemEventLog.getInstance();
-    eventLog.logEvent("Task completed: " + this.getClass().getSimpleName());
-
+    eventLog.logTaskCompletion(this.getClass().getSimpleName());
   }
 
   @Override
@@ -173,14 +170,13 @@ class WriteToCardTask implements ITask, IWriteToCardTask {
   public void execute() {
     Scanner scanner=new Scanner(System.in);
     Packet packet = new Packet();
-    System.out.println("-Write To Card Task in progress with "+adapter.getClass().getSimpleName());
+    System.out.println("-Write To Card Task in progress with "+ adapter.getClass().getSimpleName());
 
     setCom(convertByteArrayToPrimitive(packet.getData()));
+
     SystemEventLog eventLog = SystemEventLog.getInstance();
-    eventLog.logEvent("Task completed: " + this.getClass().getSimpleName());
+    eventLog.logTaskCompletion(this.getClass().getSimpleName());
   }
-
-
 
   public byte[] convertByteArrayToPrimitive(Byte[] byteArray) {
     byte[] primitiveArray = new byte[byteArray.length];
@@ -557,6 +553,10 @@ class SystemEventLog{
       e.printStackTrace();
     }
   }
+  public void logTaskCompletion(String taskName) {
+    String event = "Task completed: " + taskName;
+    logEvent(event);
+  }
   public void closeLogFile() {
     try {
       logFile.close();
@@ -603,6 +603,8 @@ public class Main {
     System.out.println("+Tokenring Card Data+ ");
     System.out.println("*******************");
     System.out.println(tokenring.toString());
+
+    SystemEventLog.getInstance().closeLogFile();
 
   }
 }
