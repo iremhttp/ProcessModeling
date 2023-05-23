@@ -217,7 +217,7 @@ class TaskQueue {
     }
   }
 
-  public void discardtask (ITask task) {
+  public void deQue (ITask task) {
 
     if (taskQueue.contains(task)) {
       taskQueue.remove(task);
@@ -486,11 +486,19 @@ class Ram implements IRam {
 
   @Override
   public int set(byte[] data, int address) {
+  try {
     this.data=data;
     this.address=address;
     this.size=ByteBuffer.wrap(data).getInt();
     System.out.println("The new written data is :  "+ Arrays.toString(this.data)+ this.address+" "+this.size );
-    return this.size;
+  }
+  catch (Exception e ) {
+    this.size=4;
+    System.out.println("size cannot be smaller than 4 bytes. size is set to 4. ");
+    System.out.println("");
+    System.out.println("");
+    System.out.println("The new written data is :  "+ Arrays.toString(this.data)+ this.address+" "+this.size );
+  }  return this.size;
   }
 
 
@@ -513,24 +521,23 @@ class Packet{
 class Thread {
 
   private  TaskQueue taskQueue ;
-  private ArrayList<ITask>tasklist=new ArrayList<>();
 
   public Thread (){
     this.taskQueue=new TaskQueue();
 
   }
   public void createTask (ITask task) {
-    tasklist.add(task);
+      taskQueue.addTask(task);
+      System.out.println(task.toString()+" Added to the Queue...");
+
   }
   public void executeTasks(){
-    for (int a = 0 ; a<tasklist.size(); a++) {
-      taskQueue.addTask(tasklist.get(a));
-      System.out.println(tasklist.get(a).toString()+" added to the queue...");
-    }
     taskQueue.execute();
   }
   public void disdcardtheTask(ITask task) {
-    tasklist.remove(task);
+    taskQueue.deQue(task);
+    System.out.println("");
+    System.out.println(task.toString()+" Removed from Queue");
   }
 
 }
@@ -565,44 +572,88 @@ class SystemEventLog{
     }
   }
 }
+
+class Cpu{
+
+  private Thread thread ;
+
+  private ArrayList<ITask> tasks;
+
+  public Cpu (Thread thread) {
+    this.thread=thread;
+
+    this.tasks=new ArrayList<>();
+  }
+
+  public void addTasks(ITask task){
+     thread.createTask(task);
+
+  }
+  public void runCpu () {
+
+    thread.executeTasks();
+  }
+  public void removeTask(ITask task) {
+    thread.disdcardtheTask(task);
+  }
+}
+
+
 public class Main {
 
   public static void main(String[] args) {
 
 
     Thread thread = new Thread();
+    Thread thread1 = new Thread();
+    TaskQueue taskQueue=new TaskQueue();
+    Cpu Cpu1 = new Cpu(thread);
+    Cpu Cpu2 = new Cpu(thread1);
+
     Ethernet ethernet = new Ethernet();
     Ram ram =new Ram(ethernet);
     Tokenring tokenring = new Tokenring(ethernet);
+
     IAdapter RamAdapter =new RamAdapter(ram);
     IAdapter EthernetAdapter = new EthernetAdapter(ethernet);
     IAdapter TokenringAdapter = new TokenringAdapter(tokenring);
+    ArrayList <ITask> listoftasks =new ArrayList<ITask>();
+    ArrayList <ITask> listoftasks2=new ArrayList<ITask>();
 
-
+    //CPU 1 TASK----------------------------------------------------------
     ITask writeToCardTask = TaskFactory.createTask("WriteToCard", EthernetAdapter,null);
     ITask readFromCardTask = TaskFactory.createTask("ReadFromCard", TokenringAdapter,null);
     ITask writeToMemoryTask = TaskFactory.createTask("WriteToMemory", RamAdapter,ethernet);
     ITask readFromMemoryTask = TaskFactory.createTask("ReadFromMemory", RamAdapter,null);
 
-    thread.createTask(writeToCardTask);
-    thread.createTask(readFromCardTask);
-    thread.createTask(writeToMemoryTask);
-    thread.createTask(readFromMemoryTask);
+    Cpu1.addTasks(writeToCardTask);
+    Cpu1.addTasks(readFromCardTask);
+    Cpu1.addTasks(writeToMemoryTask);
+    Cpu1.addTasks(readFromMemoryTask);
 
-    thread.executeTasks();
+    //CPU 2 TASK----------------------------------------------------------
+    ITask writeToCardTask2 = TaskFactory.createTask("WriteToCard", EthernetAdapter,null);
+    ITask writeToMemoryTask2 = TaskFactory.createTask("WriteToMemory", RamAdapter,ethernet);
+
+    Cpu2.addTasks(writeToCardTask2);
+    Cpu2.addTasks(writeToMemoryTask2);
+    Cpu2.removeTask(writeToCardTask2);
+
+    Cpu1.runCpu();
+    Cpu2.runCpu();
 
     System.out.println("");
-    System.out.println("");
-    System.out.println(" Observe the initial Memory and Tokenring data : ");
-    System.out.println("");
-    System.out.println("+Ram Card Data+");
-    System.out.println("*******************");
-    System.out.println(ram.toString());
-    System.out.println("");
-    System.out.println("");
-    System.out.println("+Tokenring Card Data+ ");
-    System.out.println("*******************");
-    System.out.println(tokenring.toString());
+    System.out.println("+Observe the initial Memory and Tokenring data :*");
+    System.out.println("*                                               *");
+    System.out.println("*                                               *");
+    System.out.println("*               +Ram Data+                      *");
+    System.out.println("*************************************************");
+    System.out.println("* "+ram.toString()+" *");
+    System.out.println("*                                               *");
+    System.out.println("*");
+    System.out.println("*           +Tokenring Card Data+               *");
+    System.out.println("*************************************************");
+    System.out.println("* "+tokenring.toString()+" *");
 
   }
 }
