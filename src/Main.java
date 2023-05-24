@@ -1,4 +1,6 @@
 import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -533,7 +535,7 @@ class SystemEventLog {
 
   private SystemEventLog() {
     try {
-      logFile = new FileWriter("log", true);
+      logFile = new FileWriter("log.log", true);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -548,7 +550,9 @@ class SystemEventLog {
 
   public void logEvent(String event) {
     try {
-      logFile.write(event + "\n");
+      DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
+      LocalDateTime now = LocalDateTime.now();
+      logFile.write(event + " - " + dateTimeFormatter.format(now) + "\n");
       logFile.flush();
     } catch (IOException e) {
       e.printStackTrace();
