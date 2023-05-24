@@ -1,17 +1,17 @@
-import java.nio.ByteBuffer;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.io.FileWriter;
-import java.io.IOException;
+// Münevver İrem Hatipoğlu
+// Mert Günay
+// Hüseyin Baran Özdemir
+// Erinhan Ulutaş
+// Process Modeling
 
-interface ITask {
-  void execute();
-}
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Scanner;
 
 class TaskFactory {
   public static ITask createTask(String taskType, IAdapter Adapter, IEthernet ethernet) {
-    Scanner scanner = new Scanner(System.in);
     if (taskType.equals("WriteToMemory")) {
       return new WriteToMemoryTask(Adapter, ethernet);
     } else if (taskType.equals("ReadFromMemory")) {
@@ -25,29 +25,14 @@ class TaskFactory {
   }
 }
 
-interface IReadFromMemoryTask {
-  byte[] getMem(int addr, int size);
-}
-
-interface IWriteToMemoryTask {
-  void setMem(byte[] data, int addr);
-}
-
-interface IReadFromCardTask {
-  byte[] getCom(int size);
-}
-
-interface IWriteToCardTask {
-  int setCom(byte[] data);
-}
-
-class ReadFromMemoryTask implements ITask, IReadFromMemoryTask {
+class ReadFromMemoryTask implements IReadFromMemoryTask {
   private IAdapter adapter;
 
   public ReadFromMemoryTask(IAdapter adapter) {
     this.adapter = adapter;
   }
 
+  // execute task
   @Override
   public void execute() {
     Scanner scanner = new Scanner(System.in);
@@ -67,13 +52,14 @@ class ReadFromMemoryTask implements ITask, IReadFromMemoryTask {
     eventLog.logTaskCompletion(this.getClass().getSimpleName());
   }
 
+  // get data from adapter and read from memory
   @Override
   public byte[] getMem(int addr, int size) {
     return adapter.read(addr, size);
   }
 }
 
-class WriteToMemoryTask implements ITask, IWriteToMemoryTask {
+class WriteToMemoryTask implements IWriteToMemoryTask {
   private IAdapter adapter;
   private IEthernet ethernet;
 
@@ -82,6 +68,7 @@ class WriteToMemoryTask implements ITask, IWriteToMemoryTask {
     this.ethernet = ethernet;
   }
 
+  // execute task
   @Override
   public void execute() {
     if (adapter instanceof RamAdapter) {
@@ -103,6 +90,7 @@ class WriteToMemoryTask implements ITask, IWriteToMemoryTask {
     }
   }
 
+  // convert Byte[] to byte[]
   public static byte[] convertByteArrayToPrimitive(Byte[] byteArray) {
     byte[] primitiveArray = new byte[byteArray.length];
     for (int i = 0; i < byteArray.length; i++) {
@@ -111,20 +99,21 @@ class WriteToMemoryTask implements ITask, IWriteToMemoryTask {
     return primitiveArray;
   }
 
+  // set data to adapter and write to memory
   @Override
   public void setMem(byte[] data, int addr) {
     adapter.write(data, addr);
   }
 }
 
-class ReadFromCardTask implements ITask, IReadFromCardTask {
+class ReadFromCardTask implements IReadFromCardTask {
   private IAdapter addapter;
-  private int size;
 
   public ReadFromCardTask(IAdapter adapter) {
     this.addapter = adapter;
   }
 
+  // execute task
   @Override
   public void execute() {
     Scanner scanner = new Scanner(System.in);
@@ -133,37 +122,43 @@ class ReadFromCardTask implements ITask, IReadFromCardTask {
     System.out.println("Read from card is in progressing with " + this.addapter.getClass().getSimpleName());
     System.out.print("Enter size you want to view: ");
 
-    int a = scanner.nextInt();
-    getCom(a);
+    int size = scanner.nextInt();
+
+    // send size to adapter
+    getCom(size);
 
     SystemEventLog eventLog = SystemEventLog.getInstance();
     eventLog.logTaskCompletion(this.getClass().getSimpleName());
   }
 
+  // get data from adapter and read from card
   @Override
   public byte[] getCom(int size) {
     return addapter.read(0, size);
   }
 }
 
-class WriteToCardTask implements ITask, IWriteToCardTask {
+class WriteToCardTask implements IWriteToCardTask {
   private IAdapter adapter;
 
   public WriteToCardTask(IAdapter adapter) {
     this.adapter = adapter;
   }
 
+  // execute task
   @Override
   public void execute() {
     Packet packet = new Packet();
     System.out.println("-Write To Card Task in progress with " + adapter.getClass().getSimpleName());
 
+    // set data to packet
     setCom(convertByteArrayToPrimitive(packet.getData()));
 
     SystemEventLog eventLog = SystemEventLog.getInstance();
     eventLog.logTaskCompletion(this.getClass().getSimpleName());
   }
 
+  // convert Byte[] to byte[]
   public byte[] convertByteArrayToPrimitive(Byte[] byteArray) {
     byte[] primitiveArray = new byte[byteArray.length];
     for (int i = 0; i < byteArray.length; i++) {
@@ -172,6 +167,7 @@ class WriteToCardTask implements ITask, IWriteToCardTask {
     return primitiveArray;
   }
 
+  // send data to adapter and write to card
   @Override
   public int setCom(byte[] data) {
     return adapter.write(data, 0);
@@ -186,10 +182,12 @@ class TaskQueue {
     taskQueue = new LinkedList<>();
   }
 
+  // add task to queue
   public void addTask(ITask task) {
     taskQueue.add(task);
   }
 
+  // execute tasks
   public void execute() {
     System.out.println("Execute tasks");
     System.out.println("");
@@ -199,6 +197,7 @@ class TaskQueue {
     }
   }
 
+  // remove task from queue
   public void deQue(ITask task) {
     if (taskQueue.contains(task)) {
       taskQueue.remove(task);
@@ -208,18 +207,6 @@ class TaskQueue {
   }
 }
 
-interface IRAM {
-  byte[] get(int address, int size);
-
-  int set(byte[] data, int address);
-}
-
-interface IAdapter {
-  byte[] read(int addr, int size);
-
-  int write(byte[] data, int addr);
-}
-
 class EthernetAdapter implements IAdapter {
   private Ethernet ethernet;
 
@@ -227,16 +214,19 @@ class EthernetAdapter implements IAdapter {
     this.ethernet = ethernet;
   }
 
+  // read from ethernet
   @Override
   public byte[] read(int addr, int size) {
     return convertByteArrayToPrimitive(ethernet.read(size));
   }
 
+  // write to ethernet
   @Override
   public int write(byte[] data, int addr) {
     return ethernet.write(convertByteArrayToByte(data));
   }
 
+  // convert byte[] to Byte[]
   public Byte[] convertByteArrayToByte(byte[] byteArray) {
     Byte[] result = new Byte[byteArray.length];
     for (int i = 0; i < byteArray.length; i++) {
@@ -245,6 +235,7 @@ class EthernetAdapter implements IAdapter {
     return result;
   }
 
+  // convert Byte[] to byte[]
   public byte[] convertByteArrayToPrimitive(Byte[] byteArray) {
     byte[] primitiveArray = new byte[byteArray.length];
     for (int i = 0; i < byteArray.length; i++) {
@@ -254,41 +245,33 @@ class EthernetAdapter implements IAdapter {
   }
 }
 
-interface IEthernet {
-
-  Byte[] read(Integer size);
-
-  Integer write(Byte[] data);
-
-}
-
 class Ethernet implements IEthernet {
-  private int size;
   private Byte[] data;
 
+  // read from ethernet
   @Override
   public Byte[] read(Integer size) {
     if (size <= 0 || size > data.length) {
       return new Byte[0];
-    }
-    Byte[] subset = Arrays.copyOfRange(data, 0, size);
+    } // if size is not valid return empty array
+    Byte[] subset = Arrays.copyOfRange(data, 0, size); // subset of data
     System.out.println("Read from communucation card data is : " + Arrays.toString(subset));
     System.out.println("");
     return subset;
   }
 
+  // write to communication card
   @Override
   public Integer write(Byte[] data) {
     System.out.println("data size is : " + data.length);
-    this.size = data.length;
-    this.data = data;
-    return setsize(data);
+    this.data = data; // set data
+    return setSize(data); // return size of data
   }
 
-  public Integer setsize(Byte[] data) {
+  // set size of data
+  public Integer setSize(Byte[] data) {
     this.data = data;
-    this.size = data.length;
-    return data.length;
+    return data.length; // return size of data
   }
 }
 
@@ -299,11 +282,13 @@ class RamAdapter implements IAdapter {
     this.ram = ram;
   }
 
+  // read from ram
   @Override
   public byte[] read(int addr, int size) {
     return ram.get(addr, size);
   }
 
+  // write to ram
   @Override
   public int write(byte[] data, int addr) {
     return ram.set(data, addr);
@@ -317,16 +302,19 @@ class TokenringAdapter implements IAdapter {
     this.tokenring = tokenring;
   }
 
+  // read from tokenring
   @Override
   public byte[] read(int addr, int size) {
     return convertIntArrayToByteArray(tokenring.receive(size));
   }
 
+  // write to tokenring
   @Override
   public int write(byte[] data, int addr) {
     return tokenring.send(convertByteArrayToIntArray(data), addr);
   }
 
+  // convert int array to byte array
   public byte[] convertIntArrayToByteArray(int[] intArray) {
     ByteBuffer buffer = ByteBuffer.allocate(intArray.length * Integer.BYTES);
     for (int value : intArray) {
@@ -335,6 +323,7 @@ class TokenringAdapter implements IAdapter {
     return buffer.array();
   }
 
+  // convert byte array to int array
   public int[] convertByteArrayToIntArray(byte[] byteArray) {
     int length = byteArray.length / 4;
     int[] intArray = new int[length];
@@ -346,12 +335,6 @@ class TokenringAdapter implements IAdapter {
   }
 }
 
-interface ITokenring {
-  int[] receive(int size);
-
-  int send(int[] data, int size);
-}
-
 class Tokenring implements ITokenring {
   private IEthernet ethernet;
   private int size;
@@ -361,6 +344,7 @@ class Tokenring implements ITokenring {
     this.ethernet = ethernet;
   }
 
+  // receive data from ethernet
   @Override
   public int[] receive(int size) {
     this.size = size;
@@ -368,6 +352,7 @@ class Tokenring implements ITokenring {
     return data;
   }
 
+  // convert byte array to int array
   public static int[] convertByteArrayToIntArray(Byte[] byteArray) {
     int[] intArray = new int[byteArray.length];
     for (int i = 0; i < byteArray.length; i++) {
@@ -376,6 +361,7 @@ class Tokenring implements ITokenring {
     return intArray;
   }
 
+  // send data to ethernet
   @Override
   public int send(int[] data, int size) {
     Byte[] byteData = convertIntArrayToByteArray(data); // Convert int[] to Byte[]
@@ -383,6 +369,7 @@ class Tokenring implements ITokenring {
     return size;
   }
 
+  // convert int array to byte array
   public static Byte[] convertIntArrayToByteArray(int[] intArray) {
     Byte[] byteArray = new Byte[intArray.length];
     for (int i = 0; i < intArray.length; i++) {
@@ -391,6 +378,7 @@ class Tokenring implements ITokenring {
     return byteArray;
   }
 
+  // collect data and return as string
   @Override
   public String toString() {
     return "\n*\tTokenring {                             *" +
@@ -401,67 +389,10 @@ class Tokenring implements ITokenring {
   }
 }
 
-class RAM implements IRAM {
-  private int size;
-  private int address;
-  private byte[] data;
-  private IEthernet ethernet;
-  private ArrayList<byte[]> dataList;
-
-  public RAM(IEthernet ethernet) {
-    this.ethernet = ethernet;
-    this.dataList = new ArrayList<byte[]>();
-  }
-
-  @Override
-  public byte[] get(int address, int size) {
-    if (size <= data.length && address == this.address) {
-      byte[] subset = Arrays.copyOfRange(data, 0, size);
-      return subset;
-    } else {
-      System.out.println("the address is not correct for this request");
-      return null;
-    }
-  }
-
-  public byte[] convertByteArrayToPrimitive(Byte[] byteArray) {
-    byte[] primitiveArray = new byte[byteArray.length];
-    for (int i = 0; i < byteArray.length; i++) {
-      primitiveArray[i] = byteArray[i].byteValue();
-    }
-    return primitiveArray;
-  }
-
-  @Override
-  public int set(byte[] data, int address) {
-    try {
-      this.data = data;
-      this.address = address;
-      this.size = ByteBuffer.wrap(data).getInt();
-      System.out.println("The new written data is :  " + Arrays.toString(this.data) + this.address + " " + this.size);
-    } catch (Exception e) {
-      this.size = 4;
-      System.out.println("size cannot be smaller than 4 bytes. size is set to 4. ");
-      System.out.println("");
-      System.out.println("");
-      System.out.println("The new written data is :  " + Arrays.toString(this.data) + this.address + " " + this.size);
-    }
-    return this.size;
-  }
-
-  @Override
-  public String toString() {
-    return "\n*\tRam {                                   *" +
-        "\n*\t    size = " + size + "," +
-        "\n*\t    address = " + address + "," +
-        "\n*\t    data = " + Arrays.toString(data) +
-        "\n*\t}                                      ";
-  }
-}
-
 class Packet {
   Byte[] data = { 14, 15, 16, 17, 18, 23, 45, 56, 45, 78 };
 
+  // get ethernet packet data
   public Byte[] getData() {
     return data;
   }
@@ -474,83 +405,22 @@ class Thread {
     this.taskQueue = new TaskQueue();
   }
 
+  // add task to queue
   public void createTask(ITask task) {
     taskQueue.addTask(task);
     System.out.println(task.toString() + " Added to the Queue...");
   }
 
+  // execute tasks
   public void executeTasks() {
     taskQueue.execute();
   }
 
+  // discard task from queue
   public void disdcardtheTask(ITask task) {
     taskQueue.deQue(task);
     System.out.println("");
     System.out.println(task.toString() + " Removed from Queue");
-  }
-}
-
-class SystemEventLog {
-  private static SystemEventLog instance;
-  private FileWriter logFile;
-
-  private SystemEventLog() {
-    try {
-      logFile = new FileWriter("log.log", true);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  public static SystemEventLog getInstance() {
-    if (instance == null) {
-      instance = new SystemEventLog();
-    }
-    return instance;
-  }
-
-  public void logEvent(String event) {
-    try {
-      DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
-      LocalDateTime now = LocalDateTime.now();
-      logFile.write(event + " - " + dateTimeFormatter.format(now) + "\n");
-      logFile.flush();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  public void logTaskCompletion(String taskName) {
-    String event = "Task completed: " + taskName;
-    logEvent(event);
-  }
-
-  public void closeLogFile() {
-    try {
-      logFile.close();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-}
-
-class CPU {
-  private Thread thread;
-
-  public CPU(Thread thread) {
-    this.thread = thread;
-  }
-
-  public void addTasks(ITask task) {
-    thread.createTask(task);
-  }
-
-  public void runCPU() {
-    thread.executeTasks();
-  }
-
-  public void removeTask(ITask task) {
-    thread.disdcardtheTask(task);
   }
 }
 
@@ -575,6 +445,7 @@ public class Main {
     ITask writeToMemoryTask = TaskFactory.createTask("WriteToMemory", RamAdapter, ethernet);
     ITask readFromMemoryTask = TaskFactory.createTask("ReadFromMemory", RamAdapter, null);
 
+    // add tasks to CPU1
     CPU1.addTasks(writeToCardTask);
     CPU1.addTasks(readFromCardTask);
     CPU1.addTasks(writeToMemoryTask);
@@ -584,10 +455,12 @@ public class Main {
     ITask writeToCardTask2 = TaskFactory.createTask("WriteToCard", EthernetAdapter, null);
     ITask writeToMemoryTask2 = TaskFactory.createTask("WriteToMemory", RamAdapter, ethernet);
 
+    // add tasks to CPU2
     CPU2.addTasks(writeToCardTask2);
     CPU2.addTasks(writeToMemoryTask2);
     CPU2.removeTask(writeToCardTask2);
 
+    // run CPU1 and CPU2
     CPU1.runCPU();
     CPU2.runCPU();
 
@@ -605,6 +478,7 @@ public class Main {
     System.out.println("*                                               *");
     System.out.println("*************************************************");
 
+    // close log file's scanner
     SystemEventLog.getInstance().closeLogFile();
   }
 }
